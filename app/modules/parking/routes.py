@@ -1,3 +1,5 @@
+"""Parking HTTP routes."""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/parking", tags=["parking"])
 
 
 def get_parking_service(db: Session) -> ParkingService:
+    # Compose service dependencies close to the route boundary.
     passkey_service = PasskeyService(
         generator=NumericPasskeyGenerator(),
         validator=NumericPasskeyValidator(),
@@ -31,6 +34,7 @@ def get_parking_service(db: Session) -> ParkingService:
 
 @router.post("/entry", response_model=dict)
 def create_entry(payload: ParkingEntryRequest, db: Session = Depends(get_db_session)) -> dict:
+    # Thin handler: delegate use case, commit, return envelope.
     service = get_parking_service(db)
     response = service.entry(payload)
     db.commit()
@@ -39,6 +43,7 @@ def create_entry(payload: ParkingEntryRequest, db: Session = Depends(get_db_sess
 
 @router.post("/exit", response_model=dict)
 def create_exit(payload: ParkingExitRequest, db: Session = Depends(get_db_session)) -> dict:
+    # Thin handler: delegate use case, commit, return envelope.
     service = get_parking_service(db)
     response = service.exit(payload)
     db.commit()
@@ -47,6 +52,7 @@ def create_exit(payload: ParkingExitRequest, db: Session = Depends(get_db_sessio
 
 @router.get("/active", response_model=dict)
 def list_active(db: Session = Depends(get_db_session)) -> dict:
+    # Read-only endpoint for currently active sessions.
     service = get_parking_service(db)
     response = service.get_active()
     return success_response([item.model_dump() for item in response], message="Active vehicles fetched.")
@@ -54,6 +60,7 @@ def list_active(db: Session = Depends(get_db_session)) -> dict:
 
 @router.get("/history", response_model=dict)
 def list_history(db: Session = Depends(get_db_session)) -> dict:
+    # Read-only endpoint for complete session history.
     service = get_parking_service(db)
     response = service.get_history()
     return success_response([item.model_dump() for item in response], message="Parking history fetched.")

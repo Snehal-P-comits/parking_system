@@ -1,3 +1,5 @@
+"""Parking request/response DTOs."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,6 +9,7 @@ from app.modules.vehicle.schema import VehicleCreateRequest
 
 
 class ParkingEntryRequest(VehicleCreateRequest):
+    # Entry payload intentionally reuses vehicle fields.
     pass
 
 
@@ -33,6 +36,7 @@ class ParkingExitResponse(BaseModel):
 
 
 class ParkingHistoryItem(BaseModel):
+    # Denormalized API record for list/history responses.
     session_id: int
     license_plate: str
     driver_name: str

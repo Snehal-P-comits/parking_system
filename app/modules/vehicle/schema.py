@@ -1,7 +1,10 @@
+"""Vehicle request/response DTOs."""
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class VehicleBase(BaseModel):
+    # License plate length guard; strict semantic checks happen in validator module.
     license_plate: str = Field(min_length=3, max_length=20)
     driver_name: str = Field(min_length=1, max_length=120)
     brand: str = Field(min_length=1, max_length=80)

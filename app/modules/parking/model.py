@@ -1,3 +1,8 @@
+"""Parking session ORM model.
+
+Each row tracks one entry/exit lifecycle for a vehicle.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String
@@ -28,4 +33,5 @@ class ParkingSession(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
 
+    # Back-reference to vehicle identity table.
     vehicle = relationship("Vehicle", back_populates="sessions")

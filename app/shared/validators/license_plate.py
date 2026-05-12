@@ -1,3 +1,9 @@
+"""Configurable, country-aware vehicle license plate validation.
+
+This module is intentionally framework-independent so it can be reused across
+parking systems, OCR pipelines, and registry integrations.
+"""
+
 from dataclasses import asdict, dataclass
 import re
 
@@ -14,6 +20,7 @@ class PlateComponents:
 
 @dataclass(slots=True)
 class PlateValidationResult:
+    # Structured output for machine + human friendly validation feedback.
     valid: bool
     reason: str | None = None
     normalized: str | None = None
@@ -23,6 +30,7 @@ class PlateValidationResult:
 
 @dataclass(slots=True)
 class CountryPlateSpec:
+    # Country-specific regex and optional future hooks.
     pattern: re.Pattern[str]
 
 
@@ -34,10 +42,12 @@ COUNTRY_PLATE_SPECS: dict[str, CountryPlateSpec] = {
 
 
 def normalize_plate(value: str) -> str:
+    # Canonical normalization used before any structural validation.
     return value.strip().upper()
 
 
 def format_plate(value: str, style: str = "compact", country: str = "IN") -> str:
+    # Best-effort formatting helper for UI or downstream display.
     result = validate_components(value=value, country=country)
     if not result.valid or result.components is None:
         return normalize_plate(value)
@@ -50,6 +60,7 @@ def format_plate(value: str, style: str = "compact", country: str = "IN") -> str
 
 
 def validate_structure(value: str, country: str = "IN") -> PlateValidationResult:
+    # Step 1: reject whitespace and unsupported country configs early.
     normalized = normalize_plate(value)
     if " " in value:
         return PlateValidationResult(
@@ -87,6 +98,7 @@ def validate_structure(value: str, country: str = "IN") -> PlateValidationResult
 
 
 def validate_components(value: str, country: str = "IN") -> PlateValidationResult:
+    # Step 2: parse regex groups and verify each semantic section.
     structure = validate_structure(value=value, country=country)
     if not structure.valid:
         return structure
@@ -151,6 +163,7 @@ def validate_components(value: str, country: str = "IN") -> PlateValidationResul
 
 
 def validate_state_code(state_code: str, country: str = "IN") -> PlateValidationResult:
+    # Current policy is structural-only state validation for India.
     if country != "IN":
         return PlateValidationResult(
             valid=False,
@@ -167,6 +180,7 @@ def validate_state_code(state_code: str, country: str = "IN") -> PlateValidation
 
 
 def normalize_license_plate(value: str, country: str = "IN") -> str:
+    # Backward-compatible adapter for existing service-layer call sites.
     result = validate_components(value=value, country=country)
     if not result.valid:
         raise ValidationError(result.reason or "Invalid license plate format.", code=result.code or "INVALID_LICENSE_PLATE")

@@ -1,3 +1,5 @@
+"""Passkey module exception types."""
+
 class PasskeyError(Exception):
     pass
 

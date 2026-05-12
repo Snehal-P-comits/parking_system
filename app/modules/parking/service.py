@@ -1,3 +1,8 @@
+"""Parking use-case service.
+
+Contains entry, exit, and query business workflows.
+"""
+
 from app.core.constants import ParkingSessionStatus
 from app.modules.parking.repository import ParkingSessionRepository
 from app.modules.parking.schema import (
@@ -29,6 +34,7 @@ class ParkingService:
         passkey_service: PasskeyService,
         passkey_length: int,
     ) -> None:
+        # Compose dependencies once; keeps routes thin and logic centralized.
         self.vehicle_service = VehicleService(vehicle_repository)
         self.vehicle_repository = vehicle_repository
         self.session_repository = session_repository
@@ -36,12 +42,15 @@ class ParkingService:
         self.passkey_length = passkey_length
 
     def entry(self, payload: ParkingEntryRequest) -> ParkingEntryResponse:
+        # Vehicle identity is created/updated first, then session is opened.
         vehicle = self.vehicle_service.get_or_create(payload)
         active_session = self.session_repository.get_active_by_vehicle_id(vehicle.id)
         if active_session is not None:
+            # Business guard: one active session per vehicle.
             raise ConflictError("Vehicle already has an active parking session.", code="ACTIVE_SESSION_EXISTS")
 
         try:
+            # Generate passkey that is unique among active sessions.
             generated_passkey = self.passkey_service.generate_unique(
                 length=self.passkey_length,
                 uniqueness_checker=self.session_repository.is_passkey_available_for_active_sessions,
@@ -50,6 +59,7 @@ class ParkingService:
             raise ConflictError(str(exc), code="PASSKEY_GENERATION_FAILED") from exc
 
         stored_passkey = self.passkey_service.transform(generated_passkey)
+        # Store transformed key so hashing strategy can be introduced later.
         session = self.session_repository.create_session(vehicle_id=vehicle.id, passkey=stored_passkey)
         return ParkingEntryResponse(
             license_plate=vehicle.license_plate,
@@ -59,6 +69,7 @@ class ParkingService:
         )
 
     def exit(self, payload: ParkingExitRequest) -> ParkingExitResponse:
+        # Normalize first to match canonical license-plate storage format.
         normalized_plate = normalize_license_plate(payload.license_plate)
         vehicle = self.vehicle_repository.get_by_license_plate(normalized_plate)
         if vehicle is None:
@@ -69,11 +80,13 @@ class ParkingService:
             raise NotFoundError("No active session found for vehicle.", code="ACTIVE_SESSION_NOT_FOUND")
 
         try:
+            # Validate user-supplied passkey shape before comparison.
             self.passkey_service.validate_or_raise(payload.passkey, self.passkey_length)
         except InvalidPasskeyFormatError as exc:
             raise ValidationError(str(exc), code="INVALID_PASSKEY_FORMAT") from exc
 
         candidate_passkey = self.passkey_service.transform(payload.passkey)
+        # Compare transformed candidate to stored transformed key.
         if candidate_passkey != session.passkey:
             raise AuthenticationError("Invalid passkey.", code="INVALID_PASSKEY")
 
@@ -87,10 +100,12 @@ class ParkingService:
         )
 
     def get_active(self) -> list[ParkingHistoryItem]:
+        # Query-only use case for active dashboard.
         sessions = self.session_repository.list_active()
         return [self._map_history_item(session) for session in sessions]
 
     def get_history(self) -> list[ParkingHistoryItem]:
+        # Query-only use case for historical reporting.
         sessions = self.session_repository.list_history()
         return [self._map_history_item(session) for session in sessions]
 

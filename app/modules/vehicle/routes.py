@@ -1,3 +1,8 @@
+"""Vehicle HTTP routes.
+
+Routes stay thin: validate payload, call service, commit transaction, return envelope.
+"""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,6 +17,7 @@ router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
 @router.post("", response_model=dict)
 def upsert_vehicle(payload: VehicleCreateRequest, db: Session = Depends(get_db_session)) -> dict:
+    # Keep business logic out of route handlers.
     service = VehicleService(repository=VehicleRepository(db))
     vehicle = service.get_or_create(payload)
     db.commit()

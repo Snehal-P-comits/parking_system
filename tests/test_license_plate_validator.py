@@ -1,3 +1,5 @@
+"""Unit tests for reusable Indian license plate validator."""
+
 import unittest
 
 from app.shared.validators.license_plate import (
@@ -10,6 +12,7 @@ from app.shared.validators.license_plate import (
 
 
 class TestIndianLicensePlateValidator(unittest.TestCase):
+    # Happy-path samples taken from expected Indian plate structure.
     def test_valid_plates(self) -> None:
         for plate in ("TN07CM2026", "KA01AB1234", "MH12DE1433"):
             result = validate_components(plate)
@@ -24,6 +27,7 @@ class TestIndianLicensePlateValidator(unittest.TestCase):
         self.assertEqual(normalize_license_plate("tn07cm2026"), "TN07CM2026")
 
     def test_reject_space(self) -> None:
+        # Whitespace is rejected with explicit reason code.
         result = validate_structure("TN 07CM2026")
         self.assertFalse(result.valid)
         self.assertEqual(result.code, "PLATE_SPACES_NOT_ALLOWED")

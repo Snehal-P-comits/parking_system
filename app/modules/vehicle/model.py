@@ -1,3 +1,8 @@
+"""Vehicle ORM model.
+
+Represents stable vehicle identity/details independent of parking sessions.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String
@@ -21,4 +26,5 @@ class Vehicle(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
 
+    # One vehicle can have many parking sessions over time.
     sessions = relationship("ParkingSession", back_populates="vehicle")
